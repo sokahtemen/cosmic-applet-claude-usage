@@ -1,0 +1,14 @@
+[Desktop Entry]
+Name=Claude Usage
+Comment=Claude 5h / heti felhasználás
+Type=Application
+Exec=cosmic-applet-claude-usage
+Terminal=false
+Categories=COSMIC;
+Keywords=COSMIC;Iced;
+Icon=utilities-system-monitor-symbolic
+StartupNotify=true
+NoDisplay=true
+X-CosmicApplet=true
+X-CosmicHoverPopup=Auto
+X-OverflowPriority=10
