@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use chrono::{DateTime, Local, Utc};
 use cosmic::app::{Core, Task};
-use cosmic::iced::platform_specific::shell::commands::popup::{destroy_popup, get_popup};
 use cosmic::iced::window::Id;
 use cosmic::iced::{Alignment, Length, Limits, Subscription};
 use cosmic::widget::{self, text, Column, Row};
@@ -160,24 +159,33 @@ impl Application for App {
             Message::Fetched(Err(e)) => self.error = Some(e),
             Message::TogglePopup => {
                 if let Some(id) = self.popup.take() {
-                    return destroy_popup(id);
+                    return cosmic::surface::surface_task(cosmic::surface::action::destroy_popup(id));
                 }
-                let id = Id::unique();
-                self.popup = Some(id);
-                let mut settings = self.core.applet.get_popup_settings(
-                    self.core.main_window_id().unwrap(),
-                    id,
+                // Open through libcosmic's surface action (as the stock applets do) so
+                // the popup gets the theme's frosted blur and rounded corners.
+                let popup = cosmic::surface::surface_task(cosmic::surface::action::app_popup(
+                    |_: &Self| Default::default(),
+                    |app: &mut Self| {
+                        let id = Id::unique();
+                        app.popup = Some(id);
+                        let mut settings = app.core.applet.get_popup_settings(
+                            app.core.main_window_id().unwrap(),
+                            id,
+                            None,
+                            None,
+                            None,
+                        );
+                        settings.positioner.size_limits = Limits::NONE
+                            .min_width(280.0)
+                            .max_width(360.0)
+                            .min_height(100.0)
+                            .max_height(600.0);
+                        settings
+                    },
                     None,
-                    None,
-                    None,
-                );
-                settings.positioner.size_limits = Limits::NONE
-                    .min_width(280.0)
-                    .max_width(360.0)
-                    .min_height(100.0)
-                    .max_height(600.0);
+                ));
                 let fetch = Task::perform(fetch_usage(), |r| cosmic::Action::App(Message::Fetched(r)));
-                return Task::batch([get_popup(settings), fetch]);
+                return Task::batch([popup, fetch]);
             }
             Message::PopupClosed(id) => {
                 if self.popup == Some(id) {
