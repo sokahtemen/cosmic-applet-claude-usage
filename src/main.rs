@@ -82,6 +82,10 @@ enum Message {
     Fetched(Result<Usage, String>),
 }
 
+fn fetch() -> Task<Message> {
+    Task::perform(fetch_usage(), |r| cosmic::Action::App(Message::Fetched(r)))
+}
+
 fn pct(w: &Option<Window>) -> String {
     w.as_ref()
         .map(|w| format!("{:.0}%", w.utilization))
@@ -135,7 +139,7 @@ impl Application for App {
 
     fn init(core: Core, _flags: ()) -> (Self, Task<Message>) {
         let app = App { core, ..Default::default() };
-        (app, Task::perform(fetch_usage(), |r| cosmic::Action::App(Message::Fetched(r))))
+        (app, fetch())
     }
 
     fn on_close_requested(&self, id: Id) -> Option<Message> {
@@ -148,9 +152,7 @@ impl Application for App {
 
     fn update(&mut self, message: Message) -> Task<Message> {
         match message {
-            Message::Refresh => {
-                return Task::perform(fetch_usage(), |r| cosmic::Action::App(Message::Fetched(r)));
-            }
+            Message::Refresh => return fetch(),
             Message::Fetched(Ok(u)) => {
                 self.usage = Some(u);
                 self.error = None;
@@ -184,8 +186,7 @@ impl Application for App {
                     },
                     None,
                 ));
-                let fetch = Task::perform(fetch_usage(), |r| cosmic::Action::App(Message::Fetched(r)));
-                return Task::batch([popup, fetch]);
+                return Task::batch([popup, fetch()]);
             }
             Message::PopupClosed(id) => {
                 if self.popup == Some(id) {
